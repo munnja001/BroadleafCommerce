@@ -16,9 +16,8 @@
 
 package org.broadleafcommerce.core.catalog.domain;
 
-import net.sf.cglib.core.CollectionUtils;
-import net.sf.cglib.core.Predicate;
-
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.broadleafcommerce.common.persistence.ArchiveStatus;
@@ -206,12 +205,6 @@ public class ProductImpl implements Product, Status {
 
     @Embedded
     protected ArchiveStatus archiveStatus = new ArchiveStatus();
-
-    @Transient
-    protected List<RelatedProduct> filteredCrossSales = null;
-
-    @Transient
-    protected List<RelatedProduct> filteredUpSales = null;
 
     @Override
     public Long getId() {
@@ -511,17 +504,17 @@ public class ProductImpl implements Product, Status {
 
     @Override
     public List<RelatedProduct> getCrossSaleProducts() {
-        if (filteredCrossSales == null && crossSaleProducts != null) {
-            filteredCrossSales = new ArrayList<RelatedProduct>(crossSaleProducts.size());
-            filteredCrossSales.addAll(crossSaleProducts);
-            CollectionUtils.filter(crossSaleProducts, new Predicate() {
-                @Override
-                public boolean evaluate(Object arg) {
-                    return 'Y'!=((Status)((CrossSaleProductImpl) arg).getRelatedProduct()).getArchived();
-                }
-            });
-        }
-        return filteredCrossSales;
+    	List<RelatedProduct> returnProducts = new ArrayList<RelatedProduct>();
+    	if (crossSaleProducts != null) {
+    		returnProducts.addAll(crossSaleProducts);
+    		 CollectionUtils.filter(returnProducts, new Predicate() {
+                 @Override
+                 public boolean evaluate(Object arg) {
+                     return 'Y'!=((Status)((CrossSaleProductImpl) arg).getRelatedProduct()).getArchived();
+                 }
+             });    		
+    	}
+        return returnProducts;
     }
 
     @Override
@@ -534,17 +527,17 @@ public class ProductImpl implements Product, Status {
 
     @Override
     public List<RelatedProduct> getUpSaleProducts() {
-        if (filteredUpSales == null && upSaleProducts != null) {
-            filteredUpSales = new ArrayList<RelatedProduct>(upSaleProducts.size());
-            filteredUpSales.addAll(upSaleProducts);
-            CollectionUtils.filter(upSaleProducts, new Predicate() {
-                @Override
-                public boolean evaluate(Object arg) {
-                    return 'Y'!=((Status)((UpSaleProductImpl) arg).getRelatedProduct()).getArchived();
-                }
-            });
-        }
-        return filteredUpSales;
+    	List<RelatedProduct> returnProducts = new ArrayList<RelatedProduct>();
+    	if (upSaleProducts != null) {
+    		returnProducts.addAll(upSaleProducts);
+    		CollectionUtils.filter(returnProducts, new Predicate() {
+                 @Override
+                 public boolean evaluate(Object arg) {
+                     return 'Y'!=((Status)((UpSaleProductImpl) arg).getRelatedProduct()).getArchived();
+                 }
+             });    		
+    	}
+        return returnProducts;
     }
 
     @Override
@@ -558,20 +551,32 @@ public class ProductImpl implements Product, Status {
     
     @Override
     public List<RelatedProduct> getCumulativeCrossSaleProducts() {
-    	List<RelatedProduct> products = getCrossSaleProducts();
-    	for (Category parentCategory : getAllParentCategories()) {
-    		products.addAll(parentCategory.getCumulativeCrossSaleProducts());
+    	List<RelatedProduct> returnProducts = getCrossSaleProducts();
+    	if (defaultCategory != null) {
+    		List<RelatedProduct> categoryProducts = defaultCategory.getCumulativeCrossSaleProducts();
+    		if (categoryProducts != null) {
+    			returnProducts.addAll(categoryProducts);
+    		}
     	}
-    	return products;
+    	if (returnProducts.contains(this)) {
+    		returnProducts.remove(this);
+    	}
+    	return returnProducts;
     }
     
     @Override
     public List<RelatedProduct> getCumulativeUpSaleProducts() {
-    	List<RelatedProduct> products = getUpSaleProducts();
-    	for (Category parentCategory : getAllParentCategories()) {
-    		products.addAll(parentCategory.getCumulativeUpSaleProducts());
+    	List<RelatedProduct> returnProducts = getUpSaleProducts();
+    	if (defaultCategory != null) {
+    		List<RelatedProduct> categoryProducts = defaultCategory.getCumulativeUpSaleProducts();
+    		if (categoryProducts != null) {
+    			returnProducts.addAll(categoryProducts);
+    		}
     	}
-    	return products;
+    	if (returnProducts.contains(this)) {
+    		returnProducts.remove(this);
+    	}
+    	return returnProducts;
     }
 
     @Override

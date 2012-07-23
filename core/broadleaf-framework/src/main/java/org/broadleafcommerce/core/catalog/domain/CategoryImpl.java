@@ -16,9 +16,8 @@
 
 package org.broadleafcommerce.core.catalog.domain;
 
-import net.sf.cglib.core.CollectionUtils;
-import net.sf.cglib.core.Predicate;
-
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.validator.GenericValidator;
@@ -70,10 +69,16 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * @author bTaylor
@@ -244,7 +249,7 @@ public class CategoryImpl implements Category, Status {
 
     @Transient
     @Hydrated(factoryMethod = "createChildCategoryURLMap")
-    protected Map<String, List<Long>> childCategoryURLMap;
+    protected Map<String, List<Long>> childCategoryURLMap;        
 
     @Transient
     protected List<Category> childCategories = new ArrayList<Category>(50);
@@ -257,7 +262,7 @@ public class CategoryImpl implements Category, Status {
 
     @Transient
     protected List<RelatedProduct> filteredUpSales = null;
-
+    
     @Override
     public Long getId() {
         return id;
@@ -492,6 +497,19 @@ public class CategoryImpl implements Category, Status {
     public void setChildCategoryURLMap(Map<String, List<Long>> childCategoryURLMap) {
         this.childCategoryURLMap = childCategoryURLMap;
     }
+    
+    @Override
+    public List<Category> buildCategoryHierarchy(List<Category> currentHierarchy) {
+    	if (currentHierarchy == null) {
+    		currentHierarchy = new ArrayList<Category>();
+    		currentHierarchy.add(this);
+    	}
+    	if (defaultParentCategory != null && ! currentHierarchy.contains(defaultParentCategory)) {
+    		currentHierarchy.add(defaultParentCategory);
+    		defaultParentCategory.buildCategoryHierarchy(currentHierarchy);
+    	}
+    	return currentHierarchy;
+    }
 
     @Override
     public List<Category> getAllParentCategories() {
@@ -569,22 +587,37 @@ public class CategoryImpl implements Category, Status {
     
     @Override
     public List<RelatedProduct> getCumulativeCrossSaleProducts() {
-    	List<RelatedProduct> products = getCrossSaleProducts();
-    	for (Category parentCategory : getAllParentCategories()) {
-    		products.addAll(parentCategory.getCumulativeCrossSaleProducts());
+    	Set<RelatedProduct> returnProductsSet = new LinkedHashSet<RelatedProduct>();
+    	    	
+    	List<Category> categoryHierarchy = buildCategoryHierarchy(null);
+    	for (Category category : categoryHierarchy) {
+    		returnProductsSet.addAll(category.getCrossSaleProducts());
     	}
-    	return products;
+    	return new ArrayList<RelatedProduct>(returnProductsSet);
     }
     
     @Override
     public List<RelatedProduct> getCumulativeUpSaleProducts() {
-    	List<RelatedProduct> products = getUpSaleProducts();
-    	for (Category parentCategory : getAllParentCategories()) {
-    		products.addAll(parentCategory.getCumulativeUpSaleProducts());
+    	Set<RelatedProduct> returnProductsSet = new LinkedHashSet<RelatedProduct>();
+    	
+    	List<Category> categoryHierarchy = buildCategoryHierarchy(null);
+    	for (Category category : categoryHierarchy) {
+    		returnProductsSet.addAll(category.getUpSaleProducts());
     	}
-    	return products;
+    	return new ArrayList<RelatedProduct>(returnProductsSet);
     }
 
+    @Override
+    public List<FeaturedProduct> getCumulativeFeaturedProducts() {
+    	Set<FeaturedProduct> returnProductsSet = new LinkedHashSet<FeaturedProduct>();
+    	
+    	List<Category> categoryHierarchy = buildCategoryHierarchy(null);
+    	for (Category category : categoryHierarchy) {
+    		returnProductsSet.addAll(category.getFeaturedProducts());
+    	}
+    	return new ArrayList<FeaturedProduct>(returnProductsSet);
+    }
+    
     @Override
     public void setUpSaleProducts(List<RelatedProduct> upSaleProducts) {
         this.upSaleProducts.clear();
@@ -626,6 +659,32 @@ public class CategoryImpl implements Category, Status {
 	public void setExcludedSearchFacets(List<SearchFacet> excludedSearchFacets) {
 		this.excludedSearchFacets = excludedSearchFacets;
 	}
+    
+    @Override
+    public List<CategorySearchFacet> getCumulativeSearchFacets() {
+    	List<CategorySearchFacet> returnFacets = new ArrayList<CategorySearchFacet>();
+    	returnFacets.addAll(getSearchFacets());
+    	Collections.sort(returnFacets, facetComparator);
+    	
+    	
+    	// Add in parent facets unless they are excluded
+    	List<CategorySearchFacet> parentFacets = null;
+    	if (defaultParentCategory != null) {
+    		parentFacets = defaultParentCategory.getCumulativeSearchFacets();   
+        	CollectionUtils.filter(parentFacets, new Predicate() {
+    			@Override
+    			public boolean evaluate(Object arg) {
+    				CategorySearchFacet csf = (CategorySearchFacet) arg;
+    				return !getExcludedSearchFacets().contains(csf.getSearchFacet());
+    			}
+        	});
+    	}
+    	if (parentFacets != null) {
+    		returnFacets.addAll(parentFacets);
+    	}
+    	
+    	return returnFacets;
+    }
 
 	@Override
     public Map<String, Media> getCategoryMedia() {
@@ -691,5 +750,12 @@ public class CategoryImpl implements Category, Status {
             return false;
         return true;
     }
+    
+    protected static Comparator<CategorySearchFacet> facetComparator = new Comparator<CategorySearchFacet>() {
+		@Override
+		public int compare(CategorySearchFacet o1, CategorySearchFacet o2) {
+			return o1.getPosition().compareTo(o2.getPosition());
+		}
+	};
 
 }

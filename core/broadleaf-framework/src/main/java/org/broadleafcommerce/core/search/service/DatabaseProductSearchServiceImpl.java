@@ -20,30 +20,85 @@ import org.broadleafcommerce.common.time.SystemTime;
 import org.broadleafcommerce.core.catalog.domain.Category;
 import org.broadleafcommerce.core.catalog.domain.Product;
 import org.broadleafcommerce.core.catalog.service.CatalogService;
-import org.broadleafcommerce.core.search.dao.SearchFacetDao;
+import org.broadleafcommerce.core.search.dao.SearchFacetValueDao;
+import org.broadleafcommerce.core.search.domain.CategorySearchFacet;
 import org.broadleafcommerce.core.search.domain.ProductSearchCriteria;
 import org.broadleafcommerce.core.search.domain.ProductSearchResult;
+import org.broadleafcommerce.core.search.domain.SearchFacetDTO;
+import org.broadleafcommerce.core.search.domain.SearchFacetRange;
+import org.broadleafcommerce.core.search.domain.SearchFacetResultDTO;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service("blProductSearchService")
 public class DatabaseProductSearchServiceImpl implements ProductSearchService {
 	
-	@Resource(name = "blSearchFacetDao")
-	protected SearchFacetDao searchFacetDao;
-	
 	@Resource(name = "blCatalogService")
 	protected CatalogService catalogService;
+	
+	@Resource(name = "blSearchFacetValueDao")
+	protected SearchFacetValueDao searchFacetValueDao;
 	
 	@Override
 	public ProductSearchResult findProductsByCategory(Category category, ProductSearchCriteria searchCriteria) {
 		ProductSearchResult result = new ProductSearchResult();
-		List<Product> products = catalogService.findActiveProductsByCategory(category, SystemTime.asDate());
+		List<Product> products = catalogService.findFilteredActiveProductsByCategory(category, SystemTime.asDate(), searchCriteria);
+		List<SearchFacetDTO> facets = getCategoryFacets(category);
 		result.setProducts(products);
+		result.setFacets(facets);
 		return result;
+	}
+	
+	protected List<SearchFacetDTO> getCategoryFacets(Category category) {
+		List<SearchFacetDTO> facets = new ArrayList<SearchFacetDTO>();
+		List<CategorySearchFacet> categoryFacets = category.getCumulativeSearchFacets();
+		for (CategorySearchFacet facet : categoryFacets) {
+			SearchFacetDTO dto = new SearchFacetDTO();
+			dto.setFacet(facet);
+			dto.setShowQuantity(false);
+			dto.setFacetValues(getFacetValues(facet));
+			facets.add(dto);
+		}
+		return facets;
+	}
+	
+	protected List<SearchFacetResultDTO> getFacetValues(CategorySearchFacet facet) {
+		if (facet.getSearchFacet().getSearchFacetRanges().size() > 0) {
+			return getRangeFacetValues(facet);
+		} else {
+			return getMatchFacetValues(facet);
+		}
+	}
+	
+	protected List<SearchFacetResultDTO> getRangeFacetValues(CategorySearchFacet facet) {
+		List<SearchFacetResultDTO> results = new ArrayList<SearchFacetResultDTO>();
+		for (SearchFacetRange range : facet.getSearchFacet().getSearchFacetRanges()) {
+			SearchFacetResultDTO dto = new SearchFacetResultDTO();
+			dto.setMinValue(range.getMinValue());
+			dto.setMaxValue(range.getMaxValue());
+			dto.setFacet(facet);
+			results.add(dto);
+		}
+		return results;
+	}
+	
+	protected List<SearchFacetResultDTO> getMatchFacetValues(CategorySearchFacet facet) {
+		List<SearchFacetResultDTO> results = new ArrayList<SearchFacetResultDTO>();
+		
+		List<String> values = searchFacetValueDao.readDistinctValuesForField(facet.getSearchFacet().getFieldName(), String.class);
+		
+		for (String value : values) {
+			SearchFacetResultDTO dto = new SearchFacetResultDTO();
+			dto.setValue(value);
+			dto.setFacet(facet);
+			results.add(dto);
+		}
+		
+		return results;
 	}
 
 }

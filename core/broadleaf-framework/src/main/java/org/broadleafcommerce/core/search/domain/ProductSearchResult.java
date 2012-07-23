@@ -28,6 +28,7 @@ import java.util.List;
 public class ProductSearchResult {
 	
 	protected List<Product> products;
+	protected List<SearchFacetDTO> facets;
 
 	public List<Product> getProducts() {
 		return products;
@@ -35,6 +36,14 @@ public class ProductSearchResult {
 
 	public void setProducts(List<Product> products) {
 		this.products = products;
+	}
+
+	public List<SearchFacetDTO> getFacets() {
+		return facets;
+	}
+
+	public void setFacets(List<SearchFacetDTO> facets) {
+		this.facets = facets;
 	}
 	
 }

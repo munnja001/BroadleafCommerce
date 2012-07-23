@@ -16,20 +16,18 @@
 
 package org.broadleafcommerce.openadmin.web.controller;
 
-import org.broadleafcommerce.common.service.GenericResponse;
-import org.broadleafcommerce.openadmin.server.security.service.AdminSecurityService;
-import org.broadleafcommerce.openadmin.web.form.ResetPasswordForm;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-@Controller("blAdminLoginController")
-@RequestMapping("/blcadmin/*")
+import org.broadleafcommerce.common.service.GenericResponse;
+import org.broadleafcommerce.common.web.controller.BroadleafAbstractController;
+import org.broadleafcommerce.openadmin.server.security.service.AdminSecurityService;
+import org.broadleafcommerce.openadmin.web.form.ResetPasswordForm;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
+
 /**
  * AdminLoginController handles login related needs for the BLC admin including:
  * <ul>
@@ -39,7 +37,7 @@ import javax.servlet.http.HttpServletRequest;
  * </ul>
  *
  */
-public class AdminLoginController {
+public class BroadleafAdminLoginController extends BroadleafAbstractController {
 
     @Resource(name="blAdminSecurityService")
     protected AdminSecurityService adminSecurityService;
@@ -49,24 +47,35 @@ public class AdminLoginController {
     protected String forgotPasswordView = "/blcadmin/forgotPassword";
     protected String forgotUsernameView = "/blcadmin/forgotUsername";
     protected String resetPasswordView  = "/blcadmin/resetPassword";
+    protected String changePasswordView  = "/blcadmin/changePassword";
 
-    @RequestMapping(method = { RequestMethod.GET })
-    public String login() {
+   
+    public String getChangePasswordView() {
+		return changePasswordView;
+	}
+
+
+	public void setChangePasswordView(String changePasswordView) {
+		this.changePasswordView = changePasswordView;
+	}
+
+
+	public String login(HttpServletRequest request, HttpServletResponse response, Model model) {
         return getLoginView();
     }
 
-    @RequestMapping(method = { RequestMethod.GET })
-    public String forgotPassword() {
+   
+    public String forgotPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
         return getForgotPasswordView();
     }
     
-    @RequestMapping(method = { RequestMethod.GET })
-    public String forgotUsername() {
+    
+    public String forgotUsername(HttpServletRequest request, HttpServletResponse response, Model model) {
         return getForgotUsernameView();
     }
 
-    @RequestMapping(method = { RequestMethod.POST })
-    public String forgotPassword(@RequestParam("username") String username, HttpServletRequest request) {
+    
+    public String processResetPassword(@RequestParam("username") String username, HttpServletRequest request, HttpServletResponse response, Model model) {
         GenericResponse errorResponse = adminSecurityService.sendResetPasswordNotification(username);
         if (errorResponse.getHasErrors()) {
             setErrors(errorResponse, request);
@@ -77,8 +86,8 @@ public class AdminLoginController {
         }
     }
 
-    @RequestMapping(method = { RequestMethod.POST })
-    public String forgotUsername(@RequestParam("email") String email, HttpServletRequest request) {
+   
+    public String processForgotUserName(@RequestParam("email") String email, HttpServletRequest request,Model model) {
         GenericResponse errorResponse = adminSecurityService.sendForgotUsernameNotification(email);
         if (errorResponse.getHasErrors()) {
             setErrors(errorResponse, request);
@@ -88,13 +97,11 @@ public class AdminLoginController {
         }
     }
 
-    @RequestMapping(method = { RequestMethod.GET })
-    public String resetPassword(HttpServletRequest request) {
+    public String resetPassword(HttpServletRequest request, HttpServletResponse response, Model model) {
         return getResetPasswordView();
     }
 
-    @RequestMapping(method = { RequestMethod.POST })
-    public String resetPassword(@ModelAttribute("resetPasswordForm") ResetPasswordForm resetPasswordForm,
+    public String resetPassword(ResetPasswordForm resetPasswordForm,
                                 HttpServletRequest request) {
         GenericResponse errorResponse = adminSecurityService.resetPasswordUsingToken(
                 resetPasswordForm.getUsername(), 
@@ -165,4 +172,24 @@ public class AdminLoginController {
     public void setResetPasswordView(String resetPasswordView) {
         this.resetPasswordView = resetPasswordView;
     }
+    
+    public String changePassword(HttpServletRequest request, HttpServletResponse response, Model model) {
+        return getChangePasswordView();
+    }
+
+	public String processChangePassword(ResetPasswordForm resetPasswordForm,
+			HttpServletRequest request) {
+		GenericResponse errorResponse = adminSecurityService
+				.changePassword(resetPasswordForm.getUsername(),
+						resetPasswordForm.getOldPassword(),
+						resetPasswordForm.getPassword(),
+						resetPasswordForm.getConfirmPassword());
+		if (errorResponse.getHasErrors()) {
+			setErrors(errorResponse, request);
+			return getChangePasswordView();
+		} else {
+			return redirectToLoginWithMessage("passwordReset");
+		}
+}
+
 }

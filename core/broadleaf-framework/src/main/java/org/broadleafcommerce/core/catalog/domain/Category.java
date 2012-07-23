@@ -453,6 +453,14 @@ public interface Category extends Serializable {
 	public List<RelatedProduct> getCumulativeUpSaleProducts();
 
 	/**
+	 * Returns a list of the featured products in this category as well as
+	 * all featured products in all parent categories of this category.
+	 * 
+	 * @return the cumulative featured products
+	 */
+	public List<FeaturedProduct> getCumulativeFeaturedProducts();
+
+	/**
 	 * Returns all of the SearchFacets that are directly associated with this Category
 	 * 
 	 * @return related SearchFacets
@@ -472,13 +480,32 @@ public interface Category extends Serializable {
 	 * 
 	 * @param excludedSearchFacets
 	 */
-	void setExcludedSearchFacets(List<SearchFacet> excludedSearchFacets);
+	public void setExcludedSearchFacets(List<SearchFacet> excludedSearchFacets);
 
 	/**
 	 * Gets the excluded SearchFacets
 	 * @return the excluded SearchFacets
 	 */
-	List<SearchFacet> getExcludedSearchFacets();
+	public List<SearchFacet> getExcludedSearchFacets();
 
+	/**
+	 * Returns a list of CategorySearchFacets that takes into consideration the search facets for this Category,
+	 * the search facets for all parent categories, and the search facets that should be excluded from this 
+	 * Category. This method will order the resulting list based on the {@link CategorySearchFacet#getPosition()}
+	 * method for each category level. That is, the facets on this Category will be ordered by their position
+	 * relative to each other with the ordered parent facets after that, etc.
+	 * 
+	 * @return the current active search facets for this category and all parent categories
+	 */
+	public List<CategorySearchFacet> getCumulativeSearchFacets();
+	
+	/**
+	 * Build category hierarchy by walking the default category tree up to the root category.
+	 * If the passed in tree is null then create the initial list.
+	 * 
+	 * @param currentHierarchy
+	 * @return
+	 */
+	public List<Category> buildCategoryHierarchy(List<Category> currentHierarchy);
 
 }
