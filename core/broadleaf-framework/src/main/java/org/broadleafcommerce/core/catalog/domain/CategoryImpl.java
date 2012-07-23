@@ -21,6 +21,7 @@ import net.sf.cglib.core.Predicate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.validator.GenericValidator;
 import org.broadleafcommerce.common.cache.Hydrated;
 import org.broadleafcommerce.common.cache.HydratedSetup;
 import org.broadleafcommerce.common.cache.engine.CacheFactoryException;
@@ -88,23 +89,6 @@ public class CategoryImpl implements Category, Status {
 
     private static final long serialVersionUID = 1L;
     private static final Log LOG = LogFactory.getLog(CategoryImpl.class);
-
-    private static String buildLink(Category category, boolean ignoreTopLevel) {
-        Category myCategory = category;
-        StringBuilder linkBuffer = new StringBuilder(50);
-        while (myCategory != null) {
-            if (!ignoreTopLevel || myCategory.getDefaultParentCategory() != null) {
-                if (linkBuffer.length() == 0) {
-                    linkBuffer.append(myCategory.getUrlKey());
-                } else if(myCategory.getUrlKey() != null && !"/".equals(myCategory.getUrlKey())){
-                    linkBuffer.insert(0, myCategory.getUrlKey() + '/');
-                }
-            }
-            myCategory = myCategory.getDefaultParentCategory();
-        }
-
-        return linkBuffer.toString();
-    }
 
     private static void fillInURLMapForCategory(Map<String, List<Long>> categoryUrlMap, Category category, String startingPath, List<Long> startingCategoryList) throws CacheFactoryException {
         String urlKey = category.getUrlKey();
@@ -301,7 +285,9 @@ public class CategoryImpl implements Category, Status {
         // if startswith "/" return
         // if contains a ":" and no "?" or (contains a ":" before a "?") return
         // else "add a /" at the beginning
-        if(url == null || url.equals("") || url.startsWith("/")) {
+    	if (GenericValidator.isBlankOrNull(url)) {
+    		return getGeneratedUrl();
+    	} else if (url.equals("") || url.startsWith("/")) {
             return url;       
         } else if ((url.contains(":") && !url.contains("?")) || url.indexOf('?', url.indexOf(':')) != -1) {
             return url;
@@ -323,10 +309,22 @@ public class CategoryImpl implements Category, Status {
         return urlKey;
     }
 
-    @Override
-    public String getGeneratedUrl() {
-        return buildLink(this, false);
-    }
+	@Override
+	public String getGeneratedUrl() {		
+		if (!GenericValidator.isBlankOrNull(getUrlKey())) {
+			if (getDefaultParentCategory() != null && getDefaultParentCategory().getUrl() != null) {
+				String generatedUrl = getDefaultParentCategory().getUrl();
+				if (generatedUrl.endsWith("/")) {
+					return generatedUrl + getUrlKey();
+				} else {
+					return generatedUrl + "/" + getUrlKey();
+				}		
+			} else {
+				return "/" + getUrlKey();
+			}
+		}
+		return null;
+	}
 
     @Override
     public void setUrlKey(String urlKey) {

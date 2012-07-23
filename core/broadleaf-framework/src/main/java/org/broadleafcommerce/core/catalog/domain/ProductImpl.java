@@ -697,10 +697,10 @@ public class ProductImpl implements Product, Status {
 	public String getGeneratedUrl() {		
 		if (getDefaultCategory() != null && getDefaultCategory().getGeneratedUrl() != null) {
 			String generatedUrl = getDefaultCategory().getGeneratedUrl();
-			if (generatedUrl.endsWith("//")) {
+			if (generatedUrl.endsWith("/")) {
 				return generatedUrl + getUrlKey();
 			} else {
-				return generatedUrl + "//" + getUrlKey();
+				return generatedUrl + "/" + getUrlKey();
 			}						
 		}
 		return null;
