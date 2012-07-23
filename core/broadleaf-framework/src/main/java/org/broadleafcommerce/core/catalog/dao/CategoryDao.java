@@ -200,5 +200,5 @@ public interface CategoryDao {
      */
 	public void setCurrentDateResolution(@Nonnull  Long currentDateResolution);
 	@Nonnull
-	Category findCategoryByURI(String uri);
+	List<Category> findCategoriesByURI(String uri);
 }

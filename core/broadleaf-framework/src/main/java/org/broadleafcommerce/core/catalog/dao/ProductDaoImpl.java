@@ -187,7 +187,7 @@ public class ProductDaoImpl implements ProductDao {
 	@Override
 	public List<Product> findProductByURI(String uri) {
 		
-		String urlKey = uri.substring(uri.lastIndexOf('/'));		
+		String urlKey = uri.substring(uri.lastIndexOf('/') + 1);		
 		Query query;
 	
 		query = em.createNamedQuery("BC_READ_PRODUCTS_BY_OUTGOING_URL");

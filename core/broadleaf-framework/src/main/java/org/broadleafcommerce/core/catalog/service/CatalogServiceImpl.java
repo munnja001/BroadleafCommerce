@@ -224,7 +224,29 @@ public class CatalogServiceImpl implements CatalogService {
 
 	@Override
 	public Category findCategoryByURI(String uri) {
-		return categoryDao.findCategoryByURI(uri);
+		List<Category> categories = categoryDao.findCategoriesByURI(uri);
+		if (categories == null || categories.size() == 0) {
+			return null;
+		} else if (categories.size() == 1) {
+			return categories.get(0);
+		} else {
+			// First check for a direct hit on the url
+			for (Category category : categories) {
+				if (uri.equals(category.getUrl())) {
+					return category;
+				}
+			}
+			
+			for (Category category : categories) {
+				// Next check for a direct hit on the generated URL.
+				if (uri.equals(category.getGeneratedUrl())) {
+					return category;
+				}
+			}
+			
+			// Otherwise, return the first product
+			return categories.get(0);
+		}
 	}
 
 	@Override
