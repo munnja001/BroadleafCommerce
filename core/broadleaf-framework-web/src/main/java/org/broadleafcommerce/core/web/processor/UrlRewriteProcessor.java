@@ -16,9 +16,9 @@
 
 package org.broadleafcommerce.core.web.processor;
 
-import org.apache.commons.lang.ArrayUtils;
+import org.broadleafcommerce.cms.file.service.StaticAssetService;
 import org.broadleafcommerce.common.web.BroadleafRequestContext;
-import org.broadleafcommerce.core.search.domain.SearchFacetResultDTO;
+import org.broadleafcommerce.core.web.util.ProcessorUtils;
 import org.thymeleaf.Arguments;
 import org.thymeleaf.dom.Element;
 import org.thymeleaf.processor.attr.AbstractAttributeModifierAttrProcessor;
@@ -30,53 +30,64 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A Thymeleaf processor that processes the value attribute on the element it's tied to
- * with a predetermined value based on the SearchFacetResultDTO object that is passed into this
- * processor. 
+ * A Thymeleaf processor that processes the given url through the StaticAssetService's
+ * {@link StaticAssetService#convertAssetPath(String, String, boolean)} method to determine
+ * the appropriate URL for the asset to be served from.
  * 
  * @author apazzolini
  */
-public class AddCriteriaLinkProcessor extends AbstractAttributeModifierAttrProcessor {
+public class UrlRewriteProcessor extends AbstractAttributeModifierAttrProcessor {
 
 	/**
 	 * Sets the name of this processor to be used in Thymeleaf template
 	 */
-	public AddCriteriaLinkProcessor() {
-		super("addcriterialink");
+	public UrlRewriteProcessor() {
+		super("src");
 	}
 	
 	@Override
 	public int getPrecedence() {
-		return 10000;
+		return 1000;
 	}
+	
+    /**
+     * @return true if the current request.scheme = HTTPS or if the request.isSecure value is true.
+     */
+    protected boolean isRequestSecure(HttpServletRequest request) {
+        return ("HTTPS".equalsIgnoreCase(request.getScheme()) || request.isSecure());
+    } 
 
+	
 	@Override
-	@SuppressWarnings("unchecked")
 	protected Map<String, String> getModifiedAttributeValues(Arguments arguments, Element element, String attributeName) {
 		Map<String, String> attrs = new HashMap<String, String>();
+		HttpServletRequest request = BroadleafRequestContext.getBroadleafRequestContext().getRequest();
+		StaticAssetService staticAssetService = ProcessorUtils.getStaticAssetService(arguments);
 		
-		BroadleafRequestContext blcContext = BroadleafRequestContext.getBroadleafRequestContext();
-		HttpServletRequest request = blcContext.getRequest();
+		boolean secureRequest = isRequestSecure(request);
+		String assetPath = (String) StandardExpressionProcessor.processExpression(arguments, element.getAttributeValue(attributeName));
+		//String assetPath = element.getAttributeValue(attributeName);
 		
-		String baseUrl = request.getRequestURL().toString();
-		Map<String, String[]> params = new HashMap<String, String[]>(request.getParameterMap());
+		assetPath = staticAssetService.convertAssetPath(assetPath, request.getContextPath(), secureRequest);
 		
+		attrs.put("src", assetPath);
+		
+		
+		/*
 		SearchFacetResultDTO result = (SearchFacetResultDTO) StandardExpressionProcessor.processExpression(arguments, element.getAttributeValue(attributeName));
-		
-		String key = result.getFacet().getSearchFacet().getFieldName();
-		String[] paramValues = params.get(key);
-		
-		String value = result.getValue();
-		if (value == null) {
-			value = "blcRange[" + result.getMinValue() + ":" + result.getMaxValue() + "]";
+		String value = result.getFacet().getSearchFacet().getFieldName() + "[RESULT-VALUE]";
+		if (result.getValue() != null) {
+			value = value.replace("RESULT-VALUE", result.getValue());
+		} else {
+			value = value.replace("RESULT-VALUE", result.getMinValue() + "-" + result.getMaxValue());
 		}
+		*/
 		
-		paramValues = (String[]) ArrayUtils.add(paramValues, value);
-		params.put(key, paramValues);
+		/*
+		attrs.put("id", value);
+		attrs.put("name", value);
+		*/
 		
-		String url = ProcessorUtils.getUrl(baseUrl, params);
-		
-		attrs.put("href", url);
 		return attrs;
 	}
 

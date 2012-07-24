@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.broadleafcommerce.core.web.processor;
+package org.broadleafcommerce.core.web.util;
 
+import org.broadleafcommerce.cms.file.service.StaticAssetService;
 import org.broadleafcommerce.core.catalog.service.CatalogService;
 import org.broadleafcommerce.core.catalog.service.RelatedProductsService;
 import org.broadleafcommerce.core.order.service.OrderService;
@@ -70,6 +71,22 @@ public class ProcessorUtils {
 		}
 		return catalogService;
 	}
+	
+	/**
+	 * Gets the "blStaticAssetService" bean via the Spring Web Application Context
+	 * @param arguments the Thymeleaf arguments that's part of the request
+	 * @return "blStaticAssetService" bean instance
+	 */
+	public static StaticAssetService getStaticAssetService(Arguments arguments) {
+		String key = "blStaticAssetService";
+		StaticAssetService staticAssetService = (StaticAssetService) cachedBeans.get(key);
+		if (staticAssetService == null) { 
+			final ApplicationContext appCtx = ((SpringWebContext) arguments.getContext()).getApplicationContext(); 
+			staticAssetService = (StaticAssetService) appCtx.getBean(key);
+			cachedBeans.put(key, staticAssetService);
+		}
+		return staticAssetService;
+	}
 
     /**
      * Gets the "blOrderService" bean via the Spring Web Application Context
@@ -119,10 +136,20 @@ public class ProcessorUtils {
 		StringBuilder sb = new StringBuilder();
 		sb.append(baseUrl);
 		
-		if (parameters == null || parameters.size() == 0) {
-			return sb.toString();
-		} else {
+		boolean atLeastOneParam = false;
+		
+		if (parameters != null && parameters.size() > 0) {
+			for (Entry<String, String[]> entry : parameters.entrySet()) {
+				if (entry.getValue().length > 0) {
+					atLeastOneParam = true;
+				}
+			}
+		}
+		
+		if (atLeastOneParam) {
 			sb.append("?");
+		} else {
+			return sb.toString();
 		}
 		
 		for (Entry<String, String[]> entry : parameters.entrySet()) {

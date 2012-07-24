@@ -16,11 +16,17 @@
 
 package org.broadleafcommerce.core.web.processor;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.broadleafcommerce.common.web.BroadleafRequestContext;
 import org.broadleafcommerce.core.search.domain.SearchFacetResultDTO;
+import org.broadleafcommerce.core.web.util.FacetUtils;
+import org.broadleafcommerce.core.web.util.ProcessorUtils;
 import org.thymeleaf.Arguments;
 import org.thymeleaf.dom.Element;
 import org.thymeleaf.processor.attr.AbstractAttributeModifierAttrProcessor;
 import org.thymeleaf.standard.expression.StandardExpressionProcessor;
+
+import javax.servlet.http.HttpServletRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,13 +38,13 @@ import java.util.Map;
  * 
  * @author apazzolini
  */
-public class RemoveCriteriaLinkProcessor extends AbstractAttributeModifierAttrProcessor {
+public class ToggleFacetLinkProcessor extends AbstractAttributeModifierAttrProcessor {
 
 	/**
 	 * Sets the name of this processor to be used in Thymeleaf template
 	 */
-	public RemoveCriteriaLinkProcessor() {
-		super("removecriterialink");
+	public ToggleFacetLinkProcessor() {
+		super("togglefacetlink");
 	}
 	
 	@Override
@@ -47,20 +53,33 @@ public class RemoveCriteriaLinkProcessor extends AbstractAttributeModifierAttrPr
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	protected Map<String, String> getModifiedAttributeValues(Arguments arguments, Element element, String attributeName) {
 		Map<String, String> attrs = new HashMap<String, String>();
 		
+		BroadleafRequestContext blcContext = BroadleafRequestContext.getBroadleafRequestContext();
+		HttpServletRequest request = blcContext.getRequest();
+		
+		String baseUrl = request.getRequestURL().toString();
+		Map<String, String[]> params = new HashMap<String, String[]>(request.getParameterMap());
+		
 		SearchFacetResultDTO result = (SearchFacetResultDTO) StandardExpressionProcessor.processExpression(arguments, element.getAttributeValue(attributeName));
-		String value = result.getFacet().getSearchFacet().getFieldName() + "[RESULT-VALUE]";
-		if (result.getValue() != null) {
-			value = value.replace("RESULT-VALUE", result.getValue());
+		
+		String key = FacetUtils.getKey(result);
+		String value = FacetUtils.getValue(result);
+		String[] paramValues = params.get(key);
+		
+		if (ArrayUtils.contains(paramValues, FacetUtils.getValue(result))) {
+			paramValues = (String[]) ArrayUtils.removeElement(paramValues, FacetUtils.getValue(result));
 		} else {
-			value = value.replace("RESULT-VALUE", result.getMinValue() + "-" + result.getMaxValue());
+			paramValues = (String[]) ArrayUtils.add(paramValues, value);
 		}
 		
-		attrs.put("id", value);
-		attrs.put("name", value);
+		params.put(key, paramValues);
 		
+		String url = ProcessorUtils.getUrl(baseUrl, params);
+		
+		attrs.put("href", url);
 		return attrs;
 	}
 

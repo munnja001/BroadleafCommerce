@@ -16,6 +16,7 @@
 
 package org.broadleafcommerce.core.catalog.dao;
 
+import org.apache.commons.lang.StringUtils;
 import org.broadleafcommerce.common.persistence.EntityConfiguration;
 import org.broadleafcommerce.common.persistence.Status;
 import org.broadleafcommerce.common.time.SystemTime;
@@ -39,6 +40,7 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Order;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
@@ -120,6 +122,42 @@ public class ProductDaoImpl implements ProductDao {
         return query.getResultList();
     }
     
+    @Override
+    public List<Product> readFilteredActiveProductsByQuery(String query, Date currentDate, ProductSearchCriteria searchCriteria) {
+		// Set up the criteria query that specifies we want to return Products
+    	CriteriaBuilder builder = em.getCriteriaBuilder();
+		CriteriaQuery<Product> criteria = builder.createQuery(Product.class);
+		
+		// The root of our search is Category since we are browsing
+		Root<ProductImpl> product = criteria.from(ProductImpl.class);
+		
+		// We also want to filter on attributes from sku
+		Path<Sku> sku = product.get("defaultSku");
+		
+		// Product objects are what we want back
+		criteria.select(product);
+		
+		// We only want results that match the search query
+		List<Predicate> restrictions = new ArrayList<Predicate>();
+		String lq = query.toLowerCase();
+		restrictions.add(
+			builder.or(
+				builder.like(builder.lower(sku.get("name").as(String.class)), '%' + lq + '%'),
+				builder.like(builder.lower(sku.get("longDescription").as(String.class)), '%' + lq + '%')
+			)
+		);
+				
+		attachProductSearchCriteria(searchCriteria, product, sku, restrictions);
+		
+		attachActiveRestriction(currentDate, product, sku, restrictions);
+		
+		attachOrderBy(searchCriteria, product, sku, criteria);
+		
+    	// Execute the query with the restrictions
+		criteria.where(restrictions.toArray(new Predicate[restrictions.size()]));
+    	return (List<Product>) em.createQuery(criteria).getResultList();
+    }
+    
 	@Override
     public List<Product> readFilteredActiveProductsByCategory(Long categoryId, Date currentDate, 
     		ProductSearchCriteria searchCriteria) {
@@ -141,13 +179,78 @@ public class ProductDaoImpl implements ProductDao {
 		List<Predicate> restrictions = new ArrayList<Predicate>();
 		restrictions.add(builder.equal(category.get("id"), categoryId));
 		
+		attachProductSearchCriteria(searchCriteria, product, sku, restrictions);
+		
+		attachActiveRestriction(currentDate, product, sku, restrictions);
+		
+		attachOrderBy(searchCriteria, product, sku, criteria);
+		
+    	// Execute the query with the restrictions
+		criteria.where(restrictions.toArray(new Predicate[restrictions.size()]));
+    	return (List<Product>) em.createQuery(criteria).getResultList();
+    }
+
+	protected void attachActiveRestriction(Date currentDate, Path<? extends Product> product, 
+			Path<? extends Sku> sku, List<Predicate> restrictions) {
+		CriteriaBuilder builder = em.getCriteriaBuilder();
+		
+		// Add the product archived status flag restriction
+		restrictions.add(builder.or(
+							builder.isNull(product.get("archiveStatus").get("archived")),
+							builder.equal(product.get("archiveStatus").get("archived"), 'N')));
+		
+		// Add the active start/end date restrictions
+    	Date myDate = getDateFactoringInDateResolution(currentDate);
+    	restrictions.add(builder.lessThan(sku.get("activeStartDate").as(Date.class), myDate));
+    	restrictions.add(builder.or(
+    						builder.isNull(sku.get("activeEndDate")),
+    						builder.greaterThan(sku.get("activeEndDate").as(Date.class), myDate)));
+	}
+	
+	protected void attachOrderBy(ProductSearchCriteria searchCriteria, 
+			Path<? extends Product> product, Path<? extends Sku> sku, CriteriaQuery<?> criteria) {
+		if (StringUtils.isNotBlank(searchCriteria.getSortQuery())) {
+			CriteriaBuilder builder = em.getCriteriaBuilder();
+		
+			List<Order> sorts = new ArrayList<Order>();
+			
+			String sortQueries = searchCriteria.getSortQuery();
+			for (String sortQuery : sortQueries.split(",")) {
+				String[] sort = sortQuery.split(" ");
+				if (sort.length == 2) {
+					String key = sort[0];
+					boolean asc = sort[1].toLowerCase().contains("asc");
+					
+					// Determine whether we should use the product path or the sku path
+					Path<?> pathToUse;
+					if (key.contains("defaultSku.")) {
+						pathToUse = sku;
+						key = key.substring("defaultSku.".length());
+					} else {
+						pathToUse = product;
+					}
+					
+					if (asc) {
+						sorts.add(builder.asc(pathToUse.get(key)));
+					} else {
+						sorts.add(builder.desc(pathToUse.get(key)));
+					}
+				}
+			}
+			
+			criteria.orderBy(sorts.toArray(new Order[sorts.size()]));
+		}
+	}
+
+	protected void attachProductSearchCriteria(ProductSearchCriteria searchCriteria, 
+			Path<? extends Product> product, Path<? extends Sku> sku, List<Predicate> restrictions) {
+		CriteriaBuilder builder = em.getCriteriaBuilder();
+		
 		// Build out the filter criteria from the users request
 		for (Entry<String, String[]> entry : searchCriteria.getFilterCriteria().entrySet()) {
 			String key = entry.getKey();
 			List<String> eqValues = new ArrayList<String>();
 			List<String[]> rangeValues = new ArrayList<String[]>();
-			
-			//List<String> values = Arrays.asList(entry.getValue());
 			
 			// Determine whether we should use the product path or the sku path
 			Path<?> pathToUse;
@@ -203,24 +306,8 @@ public class ProductDaoImpl implements ProductDao {
 				restrictions.add(builder.or(rangeRestrictions.toArray(new Predicate[rangeRestrictions.size()])));
 			}
 		}
-		
-		// Add the product archived status flag restriction
-		restrictions.add(builder.or(
-							builder.isNull(product.get("archiveStatus").get("archived")),
-							builder.equal(product.get("archiveStatus").get("archived"), 'N')));
-		
-		// Add the active start/end date restrictions
-    	Date myDate = getDateFactoringInDateResolution(currentDate);
-    	restrictions.add(builder.lessThan(sku.get("activeStartDate").as(Date.class), myDate));
-    	restrictions.add(builder.or(
-    						builder.isNull(sku.get("activeEndDate")),
-    						builder.greaterThan(sku.get("activeEndDate").as(Date.class), myDate)));
-		
-    	// Execute the query with the restrictions
-		criteria.where(restrictions.toArray(new Predicate[restrictions.size()]));
-    	return (List<Product>) em.createQuery(criteria).getResultList();
-    }
-
+	}
+	
     @Override
     public List<Product> readActiveProductsByCategory(Long categoryId, Date currentDate, int limit, int offset) {
         Date myDate = getDateFactoringInDateResolution(currentDate);
