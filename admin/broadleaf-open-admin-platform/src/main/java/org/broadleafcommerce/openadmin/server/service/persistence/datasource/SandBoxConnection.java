@@ -16,6 +16,8 @@
 
 package org.broadleafcommerce.openadmin.server.service.persistence.datasource;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -33,6 +35,7 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.springframework.util.Assert;
@@ -270,5 +273,115 @@ public class SandBoxConnection implements Connection {
 	public Struct createStruct(String typeName, Object[] attributes)
 			throws SQLException {
 		return delegate.createStruct(typeName, attributes);
+	}
+
+	public void setSchema(String schema) throws SQLException {
+		try {
+				Class<? extends Connection> delegateClass = delegate.getClass();
+		        Class partypes[] = new Class[1];
+		        partypes[0] = String.class;
+		        Object args[] = new Object[1];
+		        args[0] = schema;
+				Method method;
+				method = delegateClass.getMethod("setSchema", partypes);
+				method.invoke(delegate, args);
+			} catch (SecurityException e) {
+				// ignore exceptions
+			} catch (NoSuchMethodException e) {
+				// ignore exceptions
+			} catch (IllegalArgumentException e) {
+				// ignore exceptions
+			} catch (IllegalAccessException e) {
+				// ignore exceptions
+			} catch (InvocationTargetException e) {
+				// ignore exceptions
+			}
+	}
+
+	public String getSchema() throws SQLException {
+		String returnValue = null;
+		try {
+			Class<? extends Connection> delegateClass = delegate.getClass();
+			Method method = delegateClass.getMethod("getSchema");
+			returnValue = method.invoke(delegate).toString();
+		} catch (SecurityException e) {
+			// ignore exceptions
+		} catch (NoSuchMethodException e) {
+			// ignore exceptions
+		} catch (IllegalArgumentException e) {
+			// ignore exceptions
+		} catch (IllegalAccessException e) {
+			// ignore exceptions
+		} catch (InvocationTargetException e) {
+			// ignore exceptions
+		}
+		return returnValue;
+	}
+
+	public void abort(Executor executor) throws SQLException {
+		try {
+			Class<? extends Connection> delegateClass = delegate.getClass();
+	        Class partypes[] = new Class[1];
+	        partypes[0] = Executor.class;
+	        Object args[] = new Object[1];
+	        args[0] = executor;
+			Method method = delegateClass.getMethod("abort", partypes);
+			method.invoke(delegate, args);
+		} catch (SecurityException e) {
+			// ignore exceptions
+		} catch (NoSuchMethodException e) {
+			// ignore exceptions
+		} catch (IllegalArgumentException e) {
+			// ignore exceptions
+		} catch (IllegalAccessException e) {
+			// ignore exceptions
+		} catch (InvocationTargetException e) {
+			// ignore exceptions
+		}
+	}
+
+	public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+		try {
+			Class<? extends Connection> delegateClass = delegate.getClass();
+	        Class partypes[] = new Class[2];
+	        partypes[0] = Executor.class;
+	        partypes[1] = int.class;
+	        Object args[] = new Object[2];
+	        args[0] = executor;
+	        args[1] = milliseconds;
+			Method method = delegateClass.getMethod("setNetworkTimeout", partypes);
+			method.invoke(delegate, args);
+		} catch (SecurityException e) {
+			// ignore exceptions
+		} catch (NoSuchMethodException e) {
+			// ignore exceptions
+		} catch (IllegalArgumentException e) {
+			// ignore exceptions
+		} catch (IllegalAccessException e) {
+			// ignore exceptions
+		} catch (InvocationTargetException e) {
+			// ignore exceptions
+		}
+		
+	}
+
+	public int getNetworkTimeout() throws SQLException {
+		int returnValue = 0;
+		try {
+			Class<? extends Connection> delegateClass = delegate.getClass();
+			Method method = delegateClass.getMethod("getNetworkTimeout");
+			returnValue = Integer.parseInt(method.invoke(delegate).toString());
+		} catch (SecurityException e) {
+			// ignore exceptions
+		} catch (NoSuchMethodException e) {
+			// ignore exceptions
+		} catch (IllegalArgumentException e) {
+			// ignore exceptions
+		} catch (IllegalAccessException e) {
+			// ignore exceptions
+		} catch (InvocationTargetException e) {
+			// ignore exceptions
+		}
+		return returnValue;
 	}
 }
