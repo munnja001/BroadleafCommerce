@@ -32,7 +32,7 @@ public class ReviewDetailDaoImpl implements ReviewDetailDao {
     @PersistenceContext(unitName = "blPU")
     protected EntityManager em;
 
-    @Resource
+    @Resource(name="blEntityConfiguration")
     protected EntityConfiguration entityConfiguration;
 
     public ReviewDetail readReviewDetailById(Long reviewId) {
