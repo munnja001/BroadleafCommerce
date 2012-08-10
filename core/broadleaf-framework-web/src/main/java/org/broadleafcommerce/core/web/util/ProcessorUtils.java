@@ -16,20 +16,22 @@
 
 package org.broadleafcommerce.core.web.util;
 
-import org.broadleafcommerce.cms.file.service.StaticAssetService;
-import org.broadleafcommerce.core.catalog.service.CatalogService;
-import org.broadleafcommerce.core.catalog.service.RelatedProductsService;
-import org.broadleafcommerce.core.order.service.OrderService;
-import org.broadleafcommerce.openadmin.server.service.ExploitProtectionService;
-import org.springframework.context.ApplicationContext;
-import org.thymeleaf.Arguments;
-import org.thymeleaf.spring3.context.SpringWebContext;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.broadleafcommerce.cms.file.service.StaticAssetService;
+import org.broadleafcommerce.core.catalog.service.CatalogService;
+import org.broadleafcommerce.core.catalog.service.RelatedProductsService;
+import org.broadleafcommerce.core.order.service.OrderService;
+import org.broadleafcommerce.core.rating.service.RatingService;
+import org.broadleafcommerce.core.web.service.SearchFacetDTOService;
+import org.broadleafcommerce.openadmin.server.service.ExploitProtectionService;
+import org.springframework.context.ApplicationContext;
+import org.thymeleaf.Arguments;
+import org.thymeleaf.spring3.context.SpringWebContext;
 
 /**
  * @author apazzolini
@@ -102,6 +104,37 @@ public class ProcessorUtils {
             cachedBeans.put(key, orderService);
         }
         return orderService;
+    }
+    
+    /**
+     * Gets the "blSearchFacetDTOService" bean via the Spring Web Application Context
+     * @param arguments the Thymeleaf arguments that's part of the request
+     * @return "blSearchFacetDTOService" bean instance
+     */
+    public static SearchFacetDTOService getSearchFacetDTOService(Arguments arguments) {
+        String key = "blSearchFacetDTOService";
+        SearchFacetDTOService facetService = (SearchFacetDTOService) cachedBeans.get(key);
+        if (facetService == null) {
+            final ApplicationContext appCtx = ((SpringWebContext) arguments.getContext()).getApplicationContext();
+            facetService = (SearchFacetDTOService) appCtx.getBean(key);
+            cachedBeans.put(key, facetService);
+        }
+        return facetService;
+    }
+    
+    /** Gets the "blRatingService" bean via the Spring Web Application Context
+     * @param arguments the Thymeleaf arguments that's part of the request
+     * @return "blRatingService" bean instance
+     */
+    public static RatingService getRatingService(Arguments arguments) {
+    	String key = "blRatingService";
+    	RatingService ratingService = (RatingService) cachedBeans.get(key);
+    	if (ratingService == null) {
+            final ApplicationContext appCtx = ((SpringWebContext) arguments.getContext()).getApplicationContext();
+            ratingService = (RatingService) appCtx.getBean(key);
+            cachedBeans.put(key, ratingService);
+    	}
+    	return ratingService;
     }
 	
 	/**
