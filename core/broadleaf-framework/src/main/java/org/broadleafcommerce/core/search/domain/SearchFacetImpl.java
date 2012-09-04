@@ -28,6 +28,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.TableGenerator;
@@ -47,11 +49,9 @@ public class SearchFacetImpl implements SearchFacet {
     @Column(name = "SEARCH_FACET_ID")
     protected Long id;
     
-    @Column(name = "FIELD_NAME", nullable = false)
-    protected String fieldName;
-    
-    @Column(name = "QUERY_STRING_KEY", nullable = false)
-    protected String queryStringKey;
+    @ManyToOne(optional=false, targetEntity = FieldImpl.class)
+    @JoinColumn(name = "FIELD_ID")
+    protected Field field;
     
     @Column(name = "LABEL")
     protected String label;
@@ -61,6 +61,9 @@ public class SearchFacetImpl implements SearchFacet {
     
     @Column(name = "SEARCH_DISPLAY_PRIORITY")
     protected Integer searchDisplayPriority = 1;
+    
+    @Column(name = "MULTISELECT")
+    protected Boolean canMultiselect = true;
     
     @OneToMany(mappedBy = "searchFacet", targetEntity = SearchFacetRangeImpl.class, cascade = {CascadeType.ALL})
     @Cascade(value={org.hibernate.annotations.CascadeType.ALL, org.hibernate.annotations.CascadeType.DELETE_ORPHAN})
@@ -76,25 +79,15 @@ public class SearchFacetImpl implements SearchFacet {
 	public void setId(Long id) {
 		this.id = id;
 	}
-
-	@Override
-	public String getFieldName() {
-		return fieldName;
-	}
-
-	@Override
-	public void setFieldName(String fieldName) {
-		this.fieldName = fieldName;
-	}
 	
 	@Override
-	public String getQueryStringKey() {
-		return queryStringKey;
+	public Field getField() {
+		return field;
 	}
 
 	@Override
-	public void setQueryStringKey(String queryStringKey) {
-		this.queryStringKey = queryStringKey;
+	public void setField(Field field) {
+		this.field = field;
 	}
 
 	@Override
@@ -126,6 +119,16 @@ public class SearchFacetImpl implements SearchFacet {
 	public void setSearchDisplayPriority(Integer searchDisplayPriority) {
 		this.searchDisplayPriority = searchDisplayPriority;
 	}
+	
+	@Override
+	public Boolean getCanMultiselect() {
+		return canMultiselect;
+	}
+
+	@Override
+	public void setCanMultiselect(Boolean canMultiselect) {
+		this.canMultiselect = canMultiselect;
+	}
 
 	@Override
 	public List<SearchFacetRange> getSearchFacetRanges() {
@@ -137,6 +140,17 @@ public class SearchFacetImpl implements SearchFacet {
 		this.searchFacetRanges = searchFacetRanges;
 	}
 	
-	
-    
+	@Override
+	public boolean equals(Object obj) {
+	   	if (this == obj)
+	        return true;
+	    if (obj == null)
+	        return false;
+	    if (getClass() != obj.getClass())
+	        return false;
+        SearchFacet other = (SearchFacet) obj;
+        
+        return getField().equals(other.getField());
+    }
+
 }

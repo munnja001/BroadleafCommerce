@@ -55,12 +55,20 @@ public class SandBoxItemDaoImpl implements SandBoxItemDao {
 
     @Override
     public SandBoxItem retrieveBySandboxAndTemporaryItemId(Long sandBoxId, SandBoxItemType type, Long tempItemId) {
-        Query query = em.createNamedQuery("BC_READ_SANDBOX_ITEM_BY_TEMP_ITEM_ID");
-        query.setParameter("sandboxId", sandBoxId);
-        query.setParameter("itemType", type.getType());
-        query.setParameter("temporaryItemId", tempItemId);
-        List<SandBoxItem> items = query.getResultList();
-        return items == null || items.isEmpty() ? null : items.get(0);
+        if (sandBoxId != null) {
+            Query query = em.createNamedQuery("BC_READ_SANDBOX_ITEM_BY_TEMP_ITEM_ID");
+            query.setParameter("sandboxId", sandBoxId);
+            query.setParameter("itemType", type.getType());
+            query.setParameter("temporaryItemId", tempItemId);
+            List<SandBoxItem> items = query.getResultList();
+            return items == null || items.isEmpty() ? null : items.get(0);
+        } else {
+            Query query = em.createNamedQuery("BC_READ_SANDBOX_ITEM_BY_TEMP_ITEM_ID_AND_PROD_SANDBOX");
+            query.setParameter("itemType", type.getType());
+            query.setParameter("temporaryItemId", tempItemId);
+            List<SandBoxItem> items = query.getResultList();
+            return items == null || items.isEmpty() ? null : items.get(0);
+        }
     }
 
     @Override
@@ -79,11 +87,6 @@ public class SandBoxItemDaoImpl implements SandBoxItemDao {
 
     @Override
     public SandBoxItem addSandBoxItem(Long sbox, SandBoxOperationType operationType, SandBoxItemType itemType, String description, String groupDescription, Long temporaryId, Long originalId) {
-        return addSandBoxItem(sbox, operationType, itemType, description, groupDescription, temporaryId, originalId, false);
-    }
-
-    @Override
-    public SandBoxItem addSandBoxItem(Long sbox, SandBoxOperationType operationType, SandBoxItemType itemType, String description, String groupDescription, Long temporaryId, Long originalId, Boolean isRoot) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Adding sandbox item.  " + originalId);
         }
@@ -96,7 +99,6 @@ public class SandBoxItemDaoImpl implements SandBoxItemDao {
         sandBoxItem.setTemporaryItemId(temporaryId);
         sandBoxItem.setSandBoxItemType(itemType);
         sandBoxItem.setGroupDescription(groupDescription);
-        sandBoxItem.setRootEntityItem(isRoot);
 
         SandBoxAction action = new SandBoxActionImpl();
         action.setActionType(SandBoxActionType.EDIT);
@@ -130,7 +132,7 @@ public class SandBoxItemDaoImpl implements SandBoxItemDao {
 
     @Override
     public List<SandBoxItem> retrieveSandBoxItemsByTypesForSandbox(Long sandBox, List<SandBoxItemType> sandBoxItemTypes) {
-        Query query = em.createNamedQuery("BC_READ_ALL_SANDBOX_ITEMS_BY_TYPE");
+        Query query = em.createNamedQuery("BC_READ_ALL_SANDBOX_ITEMS_BY_TYPES");
         query.setParameter("sandboxId", sandBox);
         query.setParameter("sandBoxItemTypes", sandBoxItemTypes);
         return query.getResultList();

@@ -16,6 +16,7 @@
 
 package org.broadleafcommerce.core.web.controller.account;
 
+import org.broadleafcommerce.common.exception.ServiceException;
 import org.broadleafcommerce.common.security.MergeCartProcessor;
 import org.broadleafcommerce.common.service.GenericResponse;
 import org.broadleafcommerce.common.web.controller.BroadleafAbstractController;
@@ -176,8 +177,10 @@ public class BroadleafLoginController extends BroadleafAbstractController {
 	 * @param model
 	 * @param errors
 	 * @return the return view
+	 * @throws ServiceException 
 	 */
-    public String processResetPassword(ResetPasswordForm resetPasswordForm, HttpServletRequest request, HttpServletResponse response, Model model, BindingResult errors) {
+    public String processResetPassword(ResetPasswordForm resetPasswordForm, HttpServletRequest request, HttpServletResponse response, Model model, BindingResult errors) throws ServiceException {
+		exploitProtectionService.compareToken(resetPasswordForm.getCsrfToken());
     	GenericResponse errorResponse = new GenericResponse();
     	resetPasswordValidator.validate(resetPasswordForm.getUsername(), resetPasswordForm.getPassword(), resetPasswordForm.getPasswordConfirm(), errors);
     	if (errorResponse.getHasErrors()) {
@@ -288,7 +291,7 @@ public class BroadleafLoginController extends BroadleafAbstractController {
 	}
 	
 	public String getResetPasswordUrl(HttpServletRequest request) {		
-		String url = request.getScheme() + "://" + request.getServerName() + getResetPasswordPort(request, request.getScheme());
+		String url = request.getScheme() + "://" + request.getServerName() + getResetPasswordPort(request, request.getScheme() + "/");
 		
 		if (request.getContextPath() != null && ! "".equals(request.getContextPath())) {
 			url = url + request.getContextPath() + getResetPasswordView();

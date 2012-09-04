@@ -16,22 +16,25 @@
 
 package org.broadleafcommerce.openadmin.server.service;
 
-import com.gwtincubator.security.exception.ApplicationSecurityException;
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.broadleafcommerce.openadmin.client.service.ServiceException;
+import org.broadleafcommerce.common.exception.ServiceException;
+import org.broadleafcommerce.common.security.service.ExploitProtectionService;
 import org.broadleafcommerce.openadmin.client.service.UtilityService;
 import org.broadleafcommerce.openadmin.server.dao.DynamicEntityDao;
 import org.broadleafcommerce.openadmin.server.security.domain.AdminUser;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
+import com.gwtincubator.security.exception.ApplicationSecurityException;
 
 /**
  * @author jfischer
@@ -42,7 +45,11 @@ public class UtilityRemoteService implements ApplicationContextAware, UtilitySer
     private static final Log LOG = LogFactory.getLog(UtilityRemoteService.class);
 
     private ApplicationContext applicationContext;
+
+    @Value("${store.front.webapp.prefix}")
     protected String storeFrontWebAppPrefix;
+
+    @Value("${asset.server.url.prefix.internal}")
     protected String assetServerUrlPrefix;
 
     @Resource(name="blExploitProtectionService")

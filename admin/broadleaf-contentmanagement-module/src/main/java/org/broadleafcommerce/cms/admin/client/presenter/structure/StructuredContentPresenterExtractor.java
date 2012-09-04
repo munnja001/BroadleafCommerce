@@ -30,7 +30,6 @@ import org.broadleafcommerce.openadmin.client.translation.AdvancedCriteriaToMVEL
 import org.broadleafcommerce.openadmin.client.translation.IncompatibleMVELTranslationException;
 import org.broadleafcommerce.openadmin.client.view.dynamic.ItemBuilderDisplay;
 import org.broadleafcommerce.openadmin.client.view.dynamic.form.FormOnlyView;
-import org.broadleafcommerce.openadmin.client.view.dynamic.form.HTMLTextItem;
 
 import com.smartgwt.client.data.Criteria;
 import com.smartgwt.client.data.DSCallback;
@@ -41,7 +40,6 @@ import com.smartgwt.client.rpc.RPCResponse;
 import com.smartgwt.client.util.SC;
 import com.smartgwt.client.widgets.form.DynamicForm;
 import com.smartgwt.client.widgets.form.FilterBuilder;
-import com.smartgwt.client.widgets.form.fields.FormItem;
 
 /**
  * 
@@ -75,6 +73,7 @@ public class StructuredContentPresenterExtractor {
 	public void removeItemQualifer(final ItemBuilderDisplay builder) {
 		if (builder.getRecord() != null) {
 			presenter.getPresenterSequenceSetupManager().getDataSource("scItemCriteriaDS").removeData(builder.getRecord(), new DSCallback() {
+				@Override
 				public void execute(DSResponse response, Object rawData, DSRequest request) {
 					getDisplay().removeItemBuilder(builder);
 				}
@@ -101,10 +100,10 @@ public class StructuredContentPresenterExtractor {
 		try {
 			final Map<String, Object> dirtyValues = new HashMap<String, Object>();
 
-            extractData(selectedRecord, dirtyValues, StructuredContentPresenterInitializer.ATTRIBUTEMAP.get(FilterType.CUSTOMER), getDisplay().getCustomerFilterBuilder(), MVELKEYWORDMAP.get(FilterType.CUSTOMER));
-            extractData(selectedRecord, dirtyValues, StructuredContentPresenterInitializer.ATTRIBUTEMAP.get(FilterType.PRODUCT), getDisplay().getProductFilterBuilder(), MVELKEYWORDMAP.get(FilterType.PRODUCT));
-            extractData(selectedRecord, dirtyValues, StructuredContentPresenterInitializer.ATTRIBUTEMAP.get(FilterType.REQUEST), getDisplay().getRequestFilterBuilder(), MVELKEYWORDMAP.get(FilterType.REQUEST));
-            extractData(selectedRecord, dirtyValues, StructuredContentPresenterInitializer.ATTRIBUTEMAP.get(FilterType.TIME), getDisplay().getTimeFilterBuilder(), MVELKEYWORDMAP.get(FilterType.TIME));
+            extractData(selectedRecord, dirtyValues, StructuredContentRuleBasedPresenterInitializer.ATTRIBUTEMAP.get(FilterType.CUSTOMER), getDisplay().getCustomerFilterBuilder(), MVELKEYWORDMAP.get(FilterType.CUSTOMER));
+            extractData(selectedRecord, dirtyValues, StructuredContentRuleBasedPresenterInitializer.ATTRIBUTEMAP.get(FilterType.PRODUCT), getDisplay().getProductFilterBuilder(), MVELKEYWORDMAP.get(FilterType.PRODUCT));
+            extractData(selectedRecord, dirtyValues, StructuredContentRuleBasedPresenterInitializer.ATTRIBUTEMAP.get(FilterType.REQUEST), getDisplay().getRequestFilterBuilder(), MVELKEYWORDMAP.get(FilterType.REQUEST));
+            extractData(selectedRecord, dirtyValues, StructuredContentRuleBasedPresenterInitializer.ATTRIBUTEMAP.get(FilterType.TIME), getDisplay().getTimeFilterBuilder(), MVELKEYWORDMAP.get(FilterType.TIME));
 
 			extractQualifierData(null, true, dirtyValues);
 
@@ -114,7 +113,7 @@ public class StructuredContentPresenterExtractor {
             for (String key : dirtyValues.keySet()) {
                getDisplay().getDynamicFormDisplay().getFormOnlyDisplay().getForm().setValue(key, (String) dirtyValues.get(key));
             }
-
+    
             getDisplay().getDynamicFormDisplay().getFormOnlyDisplay().getForm().saveData(new DSCallback() {
                 @Override
                 public void execute(DSResponse response, Object rawData, DSRequest request) {
@@ -122,18 +121,14 @@ public class StructuredContentPresenterExtractor {
                         final String newId = response.getAttribute("newId");
                         FormOnlyView legacyForm = (FormOnlyView) ((FormOnlyView) getDisplay().getDynamicFormDisplay().getFormOnlyDisplay()).getMember("contentTypeForm");
                         final DynamicForm form = legacyForm.getForm();
-                        for (FormItem formItem : form.getFields()) {
-                        	 if (formItem instanceof HTMLTextItem) { 
-                        		 form.setValue(formItem.getFieldName(), ((HTMLTextItem) formItem).getHTMLValue());
-                        	 }
-                        }
+
                         StructuredContentTypeFormListDataSource dataSource = (StructuredContentTypeFormListDataSource) form.getDataSource();
                         dataSource.setCustomCriteria(new String[]{"constructForm", newId});
                         form.saveData(new DSCallback() {
                             @Override
                             public void execute(DSResponse response, Object rawData, DSRequest request) {
                                 if (response.getStatus()!=RPCResponse.STATUS_FAILURE) {
-                                    try {
+                                    try {                           
                                         extractQualifierData(newId, false, dirtyValues);
                                         if (!presenter.currentStructuredContentId.equals(newId)) {
                                             Record myRecord = getDisplay().getListDisplay().getGrid().getResultSet().find("id", presenter.currentStructuredContentId);
@@ -155,7 +150,10 @@ public class StructuredContentPresenterExtractor {
                                                 SC.say(BLCMain.getMessageManager().getString("criteriaDoesNotMatch"));
                                             }
                                         }
+                                     
+                                    
                                         getDisplay().getListDisplay().getGrid().selectRecord(getDisplay().getListDisplay().getGrid().getRecordIndex(presenter.currentStructuredContentRecord));
+                                
                                     } catch (IncompatibleMVELTranslationException e) {
                                         SC.warn(e.getMessage());
                                         java.util.logging.Logger.getLogger(getClass().toString()).log(Level.SEVERE,e.getMessage(),e);
@@ -175,8 +173,8 @@ public class StructuredContentPresenterExtractor {
     protected void resetButtonState() {
         getDisplay().getDynamicFormDisplay().getSaveButton().disable();
         getDisplay().getDynamicFormDisplay().getRefreshButton().disable();
-        getDisplay().getStructuredContentSaveButton().disable();
-        getDisplay().getStructuredContentRefreshButton().disable();
+        getDisplay().getRulesSaveButton().disable();
+        getDisplay().getRulesRefreshButton().disable();
     }
 	
 	protected void extractQualifierData(final String id, boolean isValidation, Map<String, Object> dirtyValues) throws IncompatibleMVELTranslationException {
@@ -190,7 +188,8 @@ public class StructuredContentPresenterExtractor {
                         setData(builder.getRecord(), "quantity", quantity, dirtyValues);
                         setData(builder.getRecord(), "orderItemMatchRule", mvel, dirtyValues);
                         presenter.getPresenterSequenceSetupManager().getDataSource("scItemCriteriaDS").updateData(builder.getRecord(), new DSCallback() {
-                            public void execute(DSResponse response, Object rawData, DSRequest request) {
+                            @Override
+			    public void execute(DSResponse response, Object rawData, DSRequest request) {
                                 builder.setDirty(false);
                                 resetButtonState();
                             }
@@ -204,7 +203,8 @@ public class StructuredContentPresenterExtractor {
                         temp.setAttribute("id", "");
                         presenter.getPresenterSequenceSetupManager().getDataSource("scItemCriteriaDS").setLinkedValue(id);
                         presenter.getPresenterSequenceSetupManager().getDataSource("scItemCriteriaDS").addData(temp, new DSCallback() {
-                            public void execute(DSResponse response, Object rawData, DSRequest request) {
+			            @Override
+			            public void execute(DSResponse response, Object rawData, DSRequest request) {
                                 builder.setDirty(false);
                                 builder.setRecord(temp);
                                 resetButtonState();

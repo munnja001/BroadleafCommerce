@@ -16,6 +16,12 @@
 
 package org.broadleafcommerce.core.web.checkout.model;
 
+import java.io.Serializable;
+
+import org.broadleafcommerce.common.web.form.CsrfProtectedForm;
+import org.broadleafcommerce.core.order.domain.FulfillmentOption;
+import org.broadleafcommerce.core.order.domain.PersonalMessage;
+import org.broadleafcommerce.core.order.domain.PersonalMessageImpl;
 import org.broadleafcommerce.profile.core.domain.Address;
 import org.broadleafcommerce.profile.core.domain.AddressImpl;
 
@@ -25,18 +31,30 @@ import org.broadleafcommerce.profile.core.domain.AddressImpl;
  * @author Elbert Bautista (ebautista)
  * @author Andre Azzolini (apazzolini)
  */
-public class ShippingInfoForm {
+public class ShippingInfoForm extends CsrfProtectedForm implements Serializable {
 
-    protected Address address = new AddressImpl();
+	private static final long serialVersionUID = -7895489234675056031L;
+	protected Address address = new AddressImpl();
     protected String addressName;
+    protected FulfillmentOption fulfillmentOption;
     protected Long fulfillmentOptionId;
-
-    public Long getFulfillmentOptionId() {
-        return fulfillmentOptionId;
+	protected PersonalMessage personalMessage = new PersonalMessageImpl();
+	protected String deliveryMessage;
+	
+	public Long getFulfillmentOptionId() {
+		return fulfillmentOptionId;
+	}
+	
+	public void setFulfillmentOptionId(Long fulfillmentOptionId) {
+		this.fulfillmentOptionId = fulfillmentOptionId;
+	}
+	
+    public FulfillmentOption getFulfillmentOption() {
+        return fulfillmentOption;
     }
 
-    public void setFulfillmentOptionId(Long fulfillmentOptionId) {
-        this.fulfillmentOptionId = fulfillmentOptionId;
+    public void setFulfillmentOption(FulfillmentOption fulfillmentOption) {
+        this.fulfillmentOption = fulfillmentOption;
     }
 
     public Address getAddress() {
@@ -53,6 +71,22 @@ public class ShippingInfoForm {
 
 	public void setAddressName(String addressName) {
 		this.addressName = addressName;
+	} 
+	
+	public String getDeliveryMessage() {
+		return deliveryMessage;
+	}
+	
+	public void setDeliveryMessage(String deliveryMessage) {
+		this.deliveryMessage = deliveryMessage;
+	}
+	
+	public void setPersonalMessage(PersonalMessage personalMessage) {
+		this.personalMessage = personalMessage;
+	}
+	
+	public PersonalMessage getPersonalMessage() {
+		return personalMessage;
 	}
 	
 }

@@ -31,10 +31,6 @@ import org.broadleafcommerce.common.util.DateUtil;
 import org.broadleafcommerce.common.vendor.service.type.ContainerShapeType;
 import org.broadleafcommerce.common.vendor.service.type.ContainerSizeType;
 import org.broadleafcommerce.core.media.domain.Media;
-import org.compass.annotations.Searchable;
-import org.compass.annotations.SearchableId;
-import org.compass.annotations.SearchableProperty;
-import org.compass.annotations.SupportUnmarshall;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -91,7 +87,6 @@ import java.util.Map;
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name="BLC_PRODUCT")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region="blStandardElements")
-@Searchable(alias="product", supportUnmarshall=SupportUnmarshall.FALSE)
 @AdminPresentationClass(populateToOneFields = PopulateToOneFieldsEnum.TRUE, friendlyName = "baseProduct")
 @SQLDelete(sql="UPDATE BLC_PRODUCT SET ARCHIVED = 'Y' WHERE PRODUCT_ID = ?")
 public class ProductImpl implements Product, Status {
@@ -116,7 +111,6 @@ public class ProductImpl implements Product, Status {
         }
     )
     @Column(name = "PRODUCT_ID")
-    @SearchableId
     @AdminPresentation(friendlyName = "ProductImpl_Product_ID", group = "ProductImpl_Primary_Key", visibility = VisibilityEnum.HIDDEN_ALL)
     protected Long id;
     
@@ -134,24 +128,26 @@ public class ProductImpl implements Product, Status {
 
     /** The product model number */
     @Column(name = "MODEL")
-    @SearchableProperty(name="productModel")
     @AdminPresentation(friendlyName = "ProductImpl_Product_Model", order=10, group = "ProductImpl_Product_Description", prominent=true, groupOrder=1)
     protected String model;
 
     /** The manufacture name */
     @Column(name = "MANUFACTURE")
-    @SearchableProperty(name="productManufacturer")
     @AdminPresentation(friendlyName = "ProductImpl_Product_Manufacturer", order=9, group = "ProductImpl_Product_Description", prominent=true, groupOrder=1)
     protected String manufacturer;
     
     @Column(name = "IS_FEATURED_PRODUCT", nullable=false)
     @AdminPresentation(friendlyName = "ProductImpl_Is_Featured_Product", order=11, group = "ProductImpl_Product_Description", prominent=false)
-    protected boolean isFeaturedProduct = false;
+    protected Boolean isFeaturedProduct = false;
     
     @OneToOne(optional = false, targetEntity = SkuImpl.class, cascade={CascadeType.ALL})
     @JoinColumn(name = "DEFAULT_SKU_ID")
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region="blStandardElements")
     protected Sku defaultSku;
+    
+    @Column(name = "CAN_SELL_WITHOUT_OPTIONS")
+    @AdminPresentation(friendlyName = "ProductImpl_Can_Sell_Without_Options", order=12, group = "ProductImpl_Product_Description", prominent=false)
+    protected Boolean canSellWithoutOptions = false;
     
     /** The skus. */
     @Transient
@@ -217,7 +213,6 @@ public class ProductImpl implements Product, Status {
     }
 
     @Override
-    @SearchableProperty(name = "productName")
     public String getName() {
         return getDefaultSku().getName();
     }
@@ -228,7 +223,6 @@ public class ProductImpl implements Product, Status {
     }
 
     @Override
-    @SearchableProperty(name = "productDescription")
     public String getDescription() {
         return getDefaultSku().getDescription();
     }
@@ -239,11 +233,9 @@ public class ProductImpl implements Product, Status {
     }
 
     @Override
-    @SearchableProperty(name = "productLongDescription")
     public String getLongDescription() {
         return getDefaultSku().getLongDescription();
     }
-
 
     @Override
     public void setLongDescription(String longDescription) {
@@ -317,8 +309,18 @@ public class ProductImpl implements Product, Status {
     public Sku getDefaultSku() {
 		return defaultSku;
 	}
+    
+    @Override
+	public Boolean getCanSellWithoutOptions() {
+		return canSellWithoutOptions == null ? false : canSellWithoutOptions;
+	}
 
     @Override
+	public void setCanSellWithoutOptions(Boolean canSellWithoutOptions) {
+		this.canSellWithoutOptions = canSellWithoutOptions;
+	}
+
+	@Override
 	public void setDefaultSku(Sku defaultSku) {
 		this.defaultSku = defaultSku;
 	}
@@ -631,6 +633,15 @@ public class ProductImpl implements Product, Status {
     		}
     	}
     	return null;
+    }
+    
+    @Override
+    public Map<String, ProductAttribute> getMappedProductAttributes() {
+    	Map<String, ProductAttribute> map = new HashMap<String, ProductAttribute>();
+    	for (ProductAttribute attr : getProductAttributes()) {
+    		map.put(attr.getName(), attr);
+    	}
+    	return map;
     }
 
     @Override

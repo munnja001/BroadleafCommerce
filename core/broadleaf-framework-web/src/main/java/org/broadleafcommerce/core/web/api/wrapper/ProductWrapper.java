@@ -16,11 +16,19 @@
 
 package org.broadleafcommerce.core.web.api.wrapper;
 
-import org.broadleafcommerce.core.catalog.domain.Product;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.xml.bind.annotation.*;
-import java.util.Date;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
+
+import org.broadleafcommerce.core.catalog.domain.Product;
+import org.broadleafcommerce.core.catalog.domain.ProductOption;
 
 /**
  * This is a JAXB wrapper around Product.
@@ -55,7 +63,14 @@ public class ProductWrapper extends BaseWrapper implements APIWrapper<Product>{
 
     @XmlElement
     protected String promoMessage;
-
+    
+    @XmlElement
+    protected SkuWrapper defaultSku;
+    
+    @XmlElement(name = "productOption")
+    @XmlElementWrapper(name = "productOptions")
+    protected List<ProductOptionWrapper> productOptions;
+    
     @Override
     public void wrap(Product model, HttpServletRequest request) {
         this.id = model.getId();
@@ -66,6 +81,20 @@ public class ProductWrapper extends BaseWrapper implements APIWrapper<Product>{
         this.manufacturer = model.getManufacturer();
         this.model = model.getModel();
         this.promoMessage = model.getPromoMessage();
-
+        
+        if (model.getDefaultSku() != null) {
+        	this.defaultSku = (SkuWrapper)context.getBean(SkuWrapper.class.getName());
+        	this.defaultSku.wrap(model.getDefaultSku(), request);
+        }
+        
+        if (model.getProductOptions() != null) {
+        	this.productOptions = new ArrayList<ProductOptionWrapper>();
+        	List<ProductOption> options = model.getProductOptions();
+        	for (ProductOption option : options) {
+        		ProductOptionWrapper optionWrapper = (ProductOptionWrapper)context.getBean(ProductOptionWrapper.class.getName());
+        		optionWrapper.wrap(option, request);
+        		this.productOptions.add(optionWrapper);
+        	}
+        }
     }
 }

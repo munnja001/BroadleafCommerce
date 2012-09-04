@@ -22,6 +22,7 @@ import com.anasoft.os.daofusion.cto.client.FilterAndSortCriteria;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.broadleafcommerce.admin.client.datasource.EntityImplementations;
+import org.broadleafcommerce.common.exception.ServiceException;
 import org.broadleafcommerce.common.persistence.EntityConfiguration;
 import org.broadleafcommerce.common.presentation.client.VisibilityEnum;
 import org.broadleafcommerce.core.offer.domain.Offer;
@@ -38,7 +39,6 @@ import org.broadleafcommerce.openadmin.client.dto.MergedPropertyType;
 import org.broadleafcommerce.openadmin.client.dto.PersistencePackage;
 import org.broadleafcommerce.openadmin.client.dto.PersistencePerspective;
 import org.broadleafcommerce.openadmin.client.dto.Property;
-import org.broadleafcommerce.openadmin.client.service.ServiceException;
 import org.broadleafcommerce.openadmin.server.cto.BaseCtoConverter;
 import org.broadleafcommerce.openadmin.server.dao.DynamicEntityDao;
 import org.broadleafcommerce.openadmin.server.service.handler.CustomPersistenceHandlerAdapter;
@@ -300,11 +300,6 @@ public class OfferCustomPersistenceHandler extends CustomPersistenceHandlerAdapt
 			updateRule(entity, offerInstance, "appliesToCustomerRules", OfferRuleType.CUSTOMER);
 			updateRule(entity, offerInstance, "appliesToFulfillmentGroupRules", OfferRuleType.FULFILLMENT_GROUP);
 			
-			if (entity.findProperty("type") != null && !entity.findProperty("type").getValue().equals("ORDER_ITEM") && offerInstance.getTargetItemCriteria() != null) {
-				offerInstance.getTargetItemCriteria().setOffer(null);
-				offerInstance.setTargetItemCriteria(null);
-			}
-			
 			dynamicEntityDao.merge(offerInstance);
 			
 			Property offerCodeId = entity.findProperty("offerCode.id");
@@ -343,7 +338,7 @@ public class OfferCustomPersistenceHandler extends CustomPersistenceHandlerAdapt
             if (fgProperty != null) {
                 offerEntity.addProperty(fgProperty);
             }
-			
+
 			return offerEntity;
 		} catch (Exception e) {
             LOG.error("Unable to update entity for " + entity.getType()[0], e);
